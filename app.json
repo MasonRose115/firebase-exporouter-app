@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "firebase-rn-lib-app",
-    "slug": "firebase-rn-lib-app",
+    "name": "Scavenger-App",
+    "slug": "scavenger-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",

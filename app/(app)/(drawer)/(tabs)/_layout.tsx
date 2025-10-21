@@ -65,6 +65,19 @@ export default function TabLayout() {
           ),
         }}
       />
+       <Tabs.Screen
+        name="Scavenger Hunt"
+        options={{
+          headerLeft: () => null,
+          title: "Scavenger Hunt",
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon
+              name={focused ? "map" : "map-outline"}
+              color={color}
+            />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

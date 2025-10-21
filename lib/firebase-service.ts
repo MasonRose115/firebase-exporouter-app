@@ -39,7 +39,7 @@ export interface FirebaseUserResponse {
 export const getCurrentUser = async () => {
   try {
     return new Promise((resolve) => {
-      const unsubscribe = auth.onAuthStateChanged((user) => {
+      const unsubscribe = auth.onAuthStateChanged((user: User | null) => {
         unsubscribe();
         resolve(user ? { user } : null);
       });

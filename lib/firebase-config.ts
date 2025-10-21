@@ -4,10 +4,9 @@
  * @module
  */
 import { initializeApp } from "firebase/app";
-
-// IGNORE IMPORT ERROR, this is a valid import, still investigating
-import { initializeAuth, getReactNativePersistence } from "firebase/auth";
+import { initializeAuth, getAuth } from "firebase/auth";
 import ReactNativeAsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from 'react-native';
 
 // ============================================================================
 // Configuration
@@ -37,12 +36,63 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 /**
- * Initialize Firebase Authentication service
- * @type {Auth}
+ * Initialize Firebase Authentication service with a safe fallback.
+ * On web we use the standard getAuth(). On native, attempt to use
+ * getReactNativePersistence(AsyncStorage) if available; otherwise
+ * fall back to initializeAuth without custom persistence.
  */
-const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(ReactNativeAsyncStorage),
-});
+let auth: any;
+if (Platform.OS === 'web') {
+  // Web: use the standard JS SDK auth
+  const { getAuth } = require('firebase/auth');
+  auth = getAuth(app);
+} else {
+  try {
+    // Try to load the RN persistence helper from known paths.
+    // Use require to avoid static ESM import resolution problems in the bundler.
+    // Try the distribution path first, then the main package.
+    // @ts-ignore
+    let getReactNativePersistence: any;
+    try {
+      // Common location used in some Firebase releases
+      // @ts-ignore
+      getReactNativePersistence = require('firebase/auth/dist/rn/persistence').getReactNativePersistence;
+    } catch (err) {
+      try {
+        // Fallback to main export if present
+        // @ts-ignore
+        getReactNativePersistence = require('firebase/auth').getReactNativePersistence;
+      } catch (err2) {
+        getReactNativePersistence = undefined;
+      }
+    }
+
+    if (typeof getReactNativePersistence === 'function') {
+      auth = initializeAuth(app, {
+        persistence: getReactNativePersistence(ReactNativeAsyncStorage),
+      });
+    } else {
+      console.warn('getReactNativePersistence not available; initializing auth without RN persistence');
+      auth = initializeAuth(app);
+    }
+  } catch (e) {
+    console.warn('Failed to initialize native Firebase auth with RN persistence, falling back:', e);
+    try {
+      auth = initializeAuth(app);
+    } catch (err) {
+      console.error('initializeAuth failed entirely:', err);
+      // As a last resort, attempt getAuth
+      try {
+        // @ts-ignore
+        const { getAuth } = require('firebase/auth');
+        auth = getAuth(app);
+      } catch (err2) {
+        console.error('getAuth also failed:', err2);
+        auth = null;
+      }
+    }
+  }
+}
 
 export { auth };
 export default app;
