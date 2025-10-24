@@ -1,7 +1,8 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { persistStore, persistReducer } from "redux-persist";
 import { combineReducers } from "redux";
-import ScavengerHunt from "../(drawer)/(tabs)/ScavengerHunt";
+import scavSliceReducer from "./ScavSlice";
+import ScavengerHuntReducer from "./ScavengerHunt";
 
 let AsyncStorage;
 try {
@@ -19,8 +20,8 @@ const persistConfig = {
 };
 
 const rootReducer = combineReducers({
-  scavSlice: scavSlice.reducer,
-  ScavengerHunt: ScavengerHunt.reducer
+  scavSlice: scavSliceReducer,
+  ScavengerHunt: ScavengerHuntReducer
 });
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 

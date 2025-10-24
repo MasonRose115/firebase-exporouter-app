@@ -1,7 +1,7 @@
 import { Tabs } from "expo-router";
 import React from "react";
 import { useNavigation } from "expo-router";
-import { Ionicons } from "@expo/vector-icons"; // or your icon library
+import { Ionicons, FontAwesome5 } from "@expo/vector-icons"; // or your icon library
 import { Pressable } from "react-native";
 import { DrawerNavigationProp } from "@react-navigation/drawer";
 
@@ -66,14 +66,16 @@ export default function TabLayout() {
         }}
       />
        <Tabs.Screen
-        name="Scavenger Hunt"
+        name="ScavengerHunt"
         options={{
           headerLeft: () => null,
           title: "Scavenger Hunt",
-          tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon
-              name={focused ? "map" : "map-outline"}
+          tabBarIcon: ({ color }) => (
+            <FontAwesome5
+              name="crow"
+              size={20}
               color={color}
+              style={{ marginTop: 2 }}
             />
           ),
         }}
