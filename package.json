@@ -21,6 +21,7 @@
     "@react-navigation/drawer": "^7.1.1",
     "@reduxjs/toolkit": "^2.9.1",
     "expo": "^52.0.27",
+    "expo-checkbox": "^3.0.0",
     "expo-constants": "~17.0.4",
     "expo-font": "~13.0.3",
     "expo-linking": "~7.0.4",
