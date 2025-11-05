@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useMemo, useState } from "react";
 import { View, Text, TextInput, StyleSheet, Pressable, Alert } from "react-native";
-import { updateItemName } from "../../models/ScavSlice";
+import { updateItemName } from "../../../models/ScavSlice";
 
 export default function HuntDetail() {
   const { id } = useLocalSearchParams();

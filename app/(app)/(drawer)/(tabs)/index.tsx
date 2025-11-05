@@ -1,7 +1,12 @@
 import React from "react";
+import { useEffect, useState, } from "react";
 import { View, Text, Pressable } from "react-native";
 import { useSession } from "@/context";
 import { router } from "expo-router";
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import * as Location from 'expo-location';
+import * as TaskManager from 'expo-task-manager';
 
 /**
  * TabsIndexScreen displays the main home screen content with personalized welcome message
@@ -39,6 +44,48 @@ const TabsIndexScreen = () => {
   // Render
   // ============================================================================
   
+
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const [message, setMessage] = useState<string>('');
+  const taskName = 'BACKGROUND_LOCATION_TASK';
+
+ useEffect(() => {
+    (async () => {
+      let fg = await Location.requestForegroundPermissionsAsync();
+      if (fg.status !== 'granted') {
+        setMessage('Permission to access location was denied');
+        return;
+      }
+
+      let bg = await Location.requestBackgroundPermissionsAsync();
+      if (bg.status !== 'granted') {
+        setMessage('Permission to access background location was denied');
+        return;
+      }
+      console.log(location);
+      setMessage('Ready for tracking.');
+
+      return() => {
+        stopTracking();
+      }
+    })();
+  }, []);
+
+const startTracking = async () => {
+      await Location.startLocationUpdatesAsync(taskName, {
+        accuracy: Location.Accuracy.Highest,
+        distanceInterval: 3,
+      });
+    };
+
+    const stopTracking = async () => {
+     await Location.stopLocationUpdatesAsync(taskName);
+
+     await Location.hasStartedLocationUpdatesAsync(taskName);
+    }
+
+
+
   return (
     <View className="flex-1 justify-center items-center p-4">
       {/* Welcome Section */}

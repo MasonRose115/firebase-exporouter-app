@@ -113,7 +113,7 @@ const ScavengerHunt = () => {
               />
             </View>
             <View style={styles.itemDetails}>
-              <Text onPress={() => router.push("/(app)/(drawer)/(tabs)/hunt/" + item.id)} style={[
+              <Text onPress={() => router.push({ pathname: "/(app)/(drawer)/(tabs)/hunt/HuntDetail", params: { id: String(item.id) } })} style={[
                 styles.itemName,
                 item.found && styles.itemFound
               ]}>
