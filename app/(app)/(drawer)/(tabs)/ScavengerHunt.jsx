@@ -5,6 +5,7 @@ import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import Checkbox from "expo-checkbox";
 import { Ionicons } from "@expo/vector-icons";
 import { toggleItemFound, startHunt, endHunt, removeItem, removeItemsBulk, addItem } from "../../models/ScavSlice";
+import PageHeader from "../../../../components/PageHeader";
 
 const ScavengerHunt = () => {
   const router = useRouter();
@@ -54,12 +55,10 @@ const ScavengerHunt = () => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Scavenger Hunt</Text>
-        <Text style={styles.progress}>
-          Progress: {totalFound} / {items.length} ({Math.round(progress)}%)
-        </Text>
-      </View>
+      <PageHeader
+        title="Scavenger Hunt"
+        subtitle={`Progress: ${totalFound} / ${items.length} (${Math.round(progress)}%)`}
+      />
 
       {/* Started hunts section */}
       <View style={styles.startedSection}>
@@ -152,32 +151,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: '#ffffffff', 
-  },
-  header: {
-    marginBottom: 24,
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 16,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#1A1A1A',
-    marginBottom: 8,
-    letterSpacing: 0.5,
-  },
-  progress: {
-    fontSize: 16,
-    color: '#5B5B5B',
-    fontWeight: '500',
   },
   controls: {
     flexDirection: 'row',

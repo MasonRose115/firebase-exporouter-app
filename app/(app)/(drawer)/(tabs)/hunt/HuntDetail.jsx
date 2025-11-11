@@ -1,8 +1,9 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useDispatch, useSelector } from "react-redux";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, Button} from "react";
 import { View, Text, TextInput, StyleSheet, Pressable, Alert } from "react-native";
 import { updateItemName } from "../../../models/ScavSlice";
+import PageHeader from "../../../../../components/PageHeader";
 
 export default function HuntDetail() {
   const { id } = useLocalSearchParams();
@@ -39,14 +40,20 @@ export default function HuntDetail() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Hunt Name</Text>
-      <TextInput
-        style={styles.input}
-        value={name}
-        onChangeText={setName}
-        placeholder="Enter hunt name"
-        autoFocus
+      <PageHeader
+        title="Edit Hunt"
+        subtitle={item ? `Editing: ${item.name}` : undefined}
       />
+      
+      <View style={styles.form}>
+        <Text style={styles.label}>Hunt Name</Text>
+        <TextInput
+          style={styles.input}
+          value={name}
+          onChangeText={setName}
+          placeholder="Enter hunt name"
+          autoFocus
+        />
       <View style={styles.row}>
         <Pressable style={[styles.button, styles.cancel]} onPress={() => router.back()}>
           <Text style={styles.buttonText}>Cancel</Text>
@@ -55,12 +62,24 @@ export default function HuntDetail() {
           <Text style={styles.buttonText}>Save</Text>
         </Pressable>
       </View>
+      
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Locations</Text>
+        <Pressable 
+          style={styles.manageButton} 
+          onPress={() => router.push({ pathname: "/locationList", params: { huntId: item.id } })}
+        >
+          <Text style={styles.manageButtonText}>Manage Locations</Text>
+        </Pressable>
+      </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: "#fff" },
+  form: { padding: 16 },
   title: { fontSize: 20, fontWeight: "700", marginBottom: 12 },
   label: { fontSize: 14, color: "#374151", marginBottom: 6 },
   input: {
@@ -80,7 +99,33 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
   },
-  cancel: { backgroundColor: "#9ca3af" },
+  cancel: { backgroundColor: "#af9c9cff" },
   save: { backgroundColor: "#2563eb" },
   buttonText: { color: "#fff", fontWeight: "700" },
+  section: {
+    marginTop: 24,
+    padding: 16,
+    backgroundColor: "#f9fafb",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 12,
+  },
+  manageButton: {
+    backgroundColor: "#b82929ff",
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  manageButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
+  },
 });
