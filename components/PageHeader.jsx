@@ -42,8 +42,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   headerSpacer: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
   },
   title: {
     fontSize: 24,

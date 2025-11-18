@@ -5,7 +5,9 @@ import { View, Text, Button, TextInput, StyleSheet, ScrollView, Alert, Pressable
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { saveLocation, updateLocation, getLocationById } from '../../lib/firebase-service';
 import { Ionicons } from '@expo/vector-icons';
-import PageHeader from '../../components/PageHeader'; export default function LocationDetail() {
+import PageHeader from '../../components/PageHeader'; 
+
+export default function LocationDetail() {
   const { huntId, locationId } = useLocalSearchParams();
   const router = useRouter();
 
@@ -141,14 +143,20 @@ import PageHeader from '../../components/PageHeader'; export default function Lo
         // Update existing location
         await updateLocation(locationId, locationData);
         Alert.alert('Success', 'Location updated successfully!', [
-          { text: 'OK', onPress: () => router.back() }
+          {
+            text: 'OK',
+            onPress: () => router.replace(`/locationList?huntId=${huntId || 'default'}`)
+          }
         ]);
       } else {
         // Create new location
         const docId = await saveLocation(locationData);
         console.log('Location saved with ID:', docId);
         Alert.alert('Success', 'Location saved successfully!', [
-          { text: 'OK', onPress: () => router.back() }
+          {
+            text: 'OK',
+            onPress: () => router.replace(`/locationList?huntId=${huntId || 'default'}`)
+          }
         ]);
       }
     } catch (error) {
@@ -186,6 +194,11 @@ return (
     <PageHeader
       title={locationId ? 'Edit Location' : 'Add New Location'}
       subtitle={huntId ? `Hunt ID: ${huntId}` : undefined}
+      showBackButton={true}
+      onBackPress={() => {
+        console.log('Back button pressed in LocationDetail');
+        router.back();
+      }}
     />
 
     <View style={styles.form}>

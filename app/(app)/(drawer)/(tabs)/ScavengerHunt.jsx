@@ -6,11 +6,12 @@ import Checkbox from "expo-checkbox";
 import { Ionicons } from "@expo/vector-icons";
 import { toggleItemFound, startHunt, endHunt, removeItem, removeItemsBulk, addItem } from "../../models/ScavSlice";
 import PageHeader from "../../../../components/PageHeader";
+import {Hunts, User} from "../../../../lib/firebase-service";
 
 const ScavengerHunt = () => {
   const router = useRouter();
   const dispatch = useDispatch();
-    const { items, totalFound } = useSelector((state) => state.scavSlice);
+  const { items, totalFound } = useSelector((state) => state.scavSlice);
   const [selectedItems, setSelectedItems] = useState(new Set());
 
   // Started hunts and progress

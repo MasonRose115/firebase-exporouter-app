@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
@@ -8,37 +8,49 @@ export default function BackButton({ style, iconColor = '#ffffff', iconSize = 20
 
   const handlePress = () => {
     console.log('BackButton handlePress called');
-    if (onPress) {
-      console.log('Using custom onPress function');
-      onPress();
-    } else {
-      console.log('Using router.back()');
-      router.back();
+    try {
+      if (onPress) {
+        console.log('Using custom onPress function');
+        onPress();
+      } else {
+        console.log('Using router.back()');
+        router.back();
+      }
+    } catch (error) {
+      console.error('Error in handlePress:', error);
     }
   };
 
+  console.log('BackButton rendering with onPress:', !!onPress);
+
   return (
-    <Pressable style={[styles.backButton, style]} onPress={handlePress}>
+    <TouchableOpacity 
+      style={[styles.backButton, style]} 
+      onPress={handlePress}
+      activeOpacity={0.7}
+      testID="back-button"
+    >
       <Ionicons name="arrow-back" size={iconSize} color={iconColor} />
-    </Pressable>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   backButton: {
-    padding: 8,
+    padding: 10,
     borderRadius: 8,
-    backgroundColor: '#3b82f6', // Make it blue for visibility
+    backgroundColor: '#ef4444', // Red for high visibility
     borderWidth: 2,
-    borderColor: '#1d4ed8',
+    borderColor: '#dc2626',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 44,
-    height: 44,
-    elevation: 4, // Android shadow
-    shadowColor: '#000', // iOS shadow
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    width: 48,
+    height: 48,
+    elevation: 8, // Higher elevation
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    zIndex: 1000, // Ensure it's above other elements
   },
 });

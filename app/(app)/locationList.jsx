@@ -1,43 +1,51 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, Alert } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { View, Text, StyleSheet, FlatList, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import PageHeader from '../../components/PageHeader';
+import { getLocationsByHunt, deleteLocation, isLocationAvailableNow } from '../../lib/firebase-service';
 
 export default function LocationList() {
   const { huntId } = useLocalSearchParams();
   const router = useRouter();
   
-  // Mock data - replace with your actual data source (Redux, API, etc.)
-  const [locations, setLocations] = useState([
-    {
-      id: '1',
-      locationId: 'LOC001',
-      locationName: 'Campus Library',
-      explanation: 'Find the ancient wisdom in the heart of learning',
-      latitude: 40.7128,
-      longitude: -74.0060,
-      huntId: huntId
-    },
-    {
-      id: '2', 
-      locationId: 'LOC002',
-      locationName: 'Student Center',
-      explanation: 'Where students gather and friendships are made',
-      latitude: 40.7589,
-      longitude: -73.9851,
-      huntId: huntId
-    },
-    {
-      id: '3',
-      locationId: 'LOC003', 
-      locationName: 'Science Building',
-      explanation: 'Discover the mysteries of the universe here',
-      latitude: 40.7505,
-      longitude: -73.9934,
-      huntId: huntId
+  const [locations, setLocations] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Function to load locations from Firestore
+  const loadLocations = async () => {
+    try {
+      setIsLoading(true);
+      const huntIdString = huntId || 'default';
+      const locationData = await getLocationsByHunt(huntIdString);
+      setLocations(locationData);
+    } catch (error) {
+      console.error('Error loading locations:', error);
+      Alert.alert('Error', 'Failed to load locations');
+    } finally {
+      setIsLoading(false);
     }
-  ]);
+  };
+
+  // Function to refresh locations (pull-to-refresh)
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await loadLocations();
+    setIsRefreshing(false);
+  };
+
+  // Load locations when component mounts
+  useEffect(() => {
+    loadLocations();
+  }, [huntId]);
+
+  // Reload locations when screen comes into focus (when returning from locationDetail)
+  useFocusEffect(
+    React.useCallback(() => {
+      loadLocations();
+    }, [huntId])
+  );
 
   const handleAddLocation = () => {
     router.push({
@@ -57,7 +65,17 @@ export default function LocationList() {
     });
   };
 
-  const handleDeleteLocation = (locationId) => {
+  const handleEditAvailability = (location) => {
+    router.push({
+      pathname: '/conditionEdit',
+      params: {
+        huntId,
+        locationId: location.id,
+      }
+    });
+  };
+
+  const handleDeleteLocation = async (documentId) => {
     Alert.alert(
       'Delete Location',
       'Are you sure you want to delete this location?',
@@ -69,9 +87,16 @@ export default function LocationList() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            setLocations(prev => prev.filter(loc => loc.id !== locationId));
-            // TODO: Update your data store here
+          onPress: async () => {
+            try {
+              await deleteLocation(documentId);
+              // Refresh the list after deletion
+              loadLocations();
+              Alert.alert('Success', 'Location deleted successfully');
+            } catch (error) {
+              console.error('Error deleting location:', error);
+              Alert.alert('Error', 'Failed to delete location');
+            }
           }
         }
       ]
@@ -87,6 +112,15 @@ export default function LocationList() {
         <View style={styles.locationHeader}>
           <Text style={styles.locationName}>{item.locationName}</Text>
           <Text style={styles.locationId}>ID: {item.locationId}</Text>
+        </View>
+        <View style={{ marginBottom: 8 }}>
+          <Text style={{
+            fontSize: 12,
+            fontWeight: '600',
+            color: isLocationAvailableNow(item) ? '#065f46' : '#7f1d1d'
+          }}>
+            {isLocationAvailableNow(item) ? 'Active now' : 'Inactive now'}
+          </Text>
         </View>
         
         {item.explanation ? (
@@ -111,6 +145,12 @@ export default function LocationList() {
           onPress={() => handleEditLocation(item)}
         >
           <Ionicons name="pencil" size={18} color="#3b82f6" />
+        </Pressable>
+        <Pressable 
+          style={styles.editButton}
+          onPress={() => handleEditAvailability(item)}
+        >
+          <Ionicons name="time-outline" size={18} color="#10b981" />
         </Pressable>
         
         <Pressable 
@@ -145,7 +185,12 @@ export default function LocationList() {
         <Text style={styles.addButtonText}>Add Location</Text>
       </Pressable>
 
-      {locations.length === 0 ? (
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3b82f6" />
+          <Text style={styles.loadingText}>Loading locations...</Text>
+        </View>
+      ) : locations.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="location-outline" size={48} color="#9ca3af" />
           <Text style={styles.emptyTitle}>No Locations Yet</Text>
@@ -161,6 +206,8 @@ export default function LocationList() {
           style={styles.locationsList}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
         />
       )}
     </View>
@@ -171,6 +218,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f9fafb',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6b7280',
+    marginTop: 12,
   },
   addButton: {
     backgroundColor: '#10b981',

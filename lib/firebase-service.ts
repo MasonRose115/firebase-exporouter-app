@@ -22,7 +22,8 @@ import {
   getDoc,
   query,
   where,
-  Timestamp 
+  Timestamp,
+  deleteField 
 } from 'firebase/firestore';
 import { auth, db } from './firebase-config';
 
@@ -49,6 +50,9 @@ export interface LocationData {
   latitude: number;
   longitude: number;
   huntId: string;
+  /** Optional time window when this location is active */
+  availableFrom?: Timestamp | null;
+  availableTo?: Timestamp | null;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
@@ -156,6 +160,9 @@ export async function saveLocation(locationData: Omit<LocationData, 'createdAt' 
       ...locationData,
       latitude: Number(locationData.latitude),
       longitude: Number(locationData.longitude),
+      // Persist time window if provided
+      availableFrom: locationData.availableFrom ?? null,
+      availableTo: locationData.availableTo ?? null,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now()
     });
@@ -181,6 +188,13 @@ export async function updateLocation(docId: string, locationData: Omit<LocationD
       ...locationData,
       latitude: Number(locationData.latitude),
       longitude: Number(locationData.longitude),
+      // Persist time window if provided
+      ...(locationData.availableFrom !== undefined && {
+        availableFrom: locationData.availableFrom ?? null,
+      }),
+      ...(locationData.availableTo !== undefined && {
+        availableTo: locationData.availableTo ?? null,
+      }),
       updatedAt: Timestamp.now()
     });
     console.log('Location updated with ID:', docId);
@@ -212,6 +226,67 @@ export async function getLocationsByHunt(huntId: string): Promise<Array<Location
     return locations;
   } catch (error) {
     console.error('Error fetching locations:', error);
+    throw error;
+  }
+}
+
+// ============================================================================
+// Time Window Utilities
+// ============================================================================
+
+/**
+ * Returns true if the provided date is within the [from, to] inclusive window.
+ * If either bound is missing, it is treated as open-ended on that side.
+ */
+export function isNowWithinTimeWindow(
+  availableFrom?: Timestamp | null,
+  availableTo?: Timestamp | null,
+  now: Date = new Date()
+): boolean {
+  const nowMs = now.getTime();
+  const fromMs = availableFrom ? availableFrom.toDate().getTime() : Number.NEGATIVE_INFINITY;
+  const toMs = availableTo ? availableTo.toDate().getTime() : Number.POSITIVE_INFINITY;
+  return nowMs >= fromMs && nowMs <= toMs;
+}
+
+/**
+ * Convenience checker for a full Location object.
+ */
+export function isLocationAvailableNow(location: Partial<LocationData>, now: Date = new Date()): boolean {
+  return isNowWithinTimeWindow(location.availableFrom ?? null, location.availableTo ?? null, now);
+}
+
+/**
+ * Update only the time window for a location.
+ * Pass `null` to clear a bound, or `undefined` to leave it unchanged.
+ */
+export async function updateLocationTimeWindow(
+  docId: string,
+  params: { availableFrom?: Date | null; availableTo?: Date | null }
+): Promise<void> {
+  try {
+    const locationRef = doc(db, 'locations', docId);
+    const payload: Record<string, any> = { updatedAt: Timestamp.now() };
+
+    if (params.availableFrom === undefined) {
+      // leave unchanged
+    } else if (params.availableFrom === null) {
+      payload.availableFrom = null; // or deleteField()
+    } else {
+      payload.availableFrom = Timestamp.fromDate(params.availableFrom);
+    }
+
+    if (params.availableTo === undefined) {
+      // leave unchanged
+    } else if (params.availableTo === null) {
+      payload.availableTo = null; // or deleteField()
+    } else {
+      payload.availableTo = Timestamp.fromDate(params.availableTo);
+    }
+
+    await updateDoc(locationRef, payload);
+  } catch (error) {
+    console.error('Error updating time window:', error);
     throw error;
   }
 }
