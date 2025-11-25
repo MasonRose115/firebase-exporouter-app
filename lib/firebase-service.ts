@@ -23,8 +23,8 @@ import {
   query,
   where,
   Timestamp,
-  deleteField 
 } from 'firebase/firestore';
+import { setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase-config';
 
 // ============================================================================
@@ -55,6 +55,243 @@ export interface LocationData {
   availableTo?: Timestamp | null;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
+}
+
+// ============================================================================
+// Hunts (Minimal) - Only fields requested: huntId, name, userId
+// ============================================================================
+
+export interface HuntData {
+  huntId: string; // logical id (also used as Firestore doc id)
+  name: string;
+  userId: string; // owner/creator
+}
+
+// ============================================================================
+// Player Hunts - Track per-user hunt status (e.g., COMPLETED)
+// ============================================================================
+
+export type PlayerHuntStatus = 'STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED';
+
+export interface PlayerHunts {
+  huntId: string;
+  playerHuntId: string; // `${userId}_${huntId}`
+  status: PlayerHuntStatus;
+  userId: string;
+  huntName?: string;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+  completedAt?: Timestamp;
+  startTime?: Timestamp; // optional explicit start time
+}
+
+// ----------------------------------------------------------------------------
+// CheckIns - per user per location completion records
+// ----------------------------------------------------------------------------
+export interface CheckInData {
+  checkInId?: string; // doc id
+  userId: string;
+  huntId: string;
+  locationId: string;
+  timeStamp?: Timestamp;
+}
+
+/** Create a check-in record for a location (idempotent per user/location). */
+export async function addCheckIn(userId: string, huntId: string, locationId: string): Promise<void> {
+  const qRef = query(
+    collection(db, 'CheckIns'),
+    where('userId', '==', userId),
+    where('huntId', '==', huntId),
+    where('locationId', '==', locationId)
+  );
+  const existing = await getDocs(qRef);
+  if (!existing.empty) return; // already checked in
+  await addDoc(collection(db, 'CheckIns'), {
+    userId,
+    huntId,
+    locationId,
+    timeStamp: Timestamp.now(),
+  });
+}
+
+/** Delete all check-ins for a user & hunt (used when abandoning). */
+export async function deleteUserCheckInsForHunt(userId: string, huntId: string): Promise<void> {
+  const qRef = query(
+    collection(db, 'CheckIns'),
+    where('userId', '==', userId),
+    where('huntId', '==', huntId)
+  );
+  const snap = await getDocs(qRef);
+  const batchDeletes: Promise<void>[] = [];
+  snap.forEach(d => batchDeletes.push(deleteDoc(doc(db, 'CheckIns', d.id))));
+  await Promise.all(batchDeletes);
+}
+
+/** Fetch completion map and total counts for all locations in a hunt. */
+export async function getCheckInSummaryForHunt(huntId: string, userId?: string): Promise<{ counts: Record<string, number>; userCompleted: Set<string>; total: number; }>{
+  const qRef = query(collection(db, 'CheckIns'), where('huntId', '==', huntId));
+  const snap = await getDocs(qRef);
+  const counts: Record<string, number> = {};
+  const userCompleted = new Set<string>();
+  snap.forEach(d => {
+    const data = d.data() as CheckInData;
+    counts[data.locationId] = (counts[data.locationId] || 0) + 1;
+    if (userId && data.userId === userId) userCompleted.add(data.locationId);
+  });
+  return { counts, userCompleted, total: snap.size };
+}
+
+/**
+ * Creates a hunt document with the specified huntId as the Firestore doc id.
+ * Stores only huntId, name, userId plus timestamps.
+ */
+export async function createHunt(huntId: string, name: string, userId: string): Promise<void> {
+  try {
+    const ref = doc(db, 'hunts', huntId);
+    await setDoc(ref, {
+      huntId,
+      name,
+      userId,
+    });
+  } catch (e) {
+    console.error('Error creating hunt:', e);
+    throw e;
+  }
+}
+
+/** Get a single hunt by huntId (doc id). */
+export async function getHuntById(huntId: string): Promise<HuntData | null> {
+  try {
+    const ref = doc(db, 'hunts', huntId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return null;
+    return snap.data() as HuntData;
+  } catch (e) {
+    console.error('Error fetching hunt:', e);
+    throw e;
+  }
+}
+
+/** Get all hunts for a given userId. */
+export async function getHuntsByUser(userId: string): Promise<HuntData[]> {
+  try {
+    const qRef = query(collection(db, 'hunts'), where('userId', '==', userId));
+    const snap = await getDocs(qRef);
+    return snap.docs.map(d => d.data() as HuntData);
+  } catch (e) {
+    console.error('Error fetching user hunts:', e);
+    throw e;
+  }
+}
+
+/** Update only the name for a hunt. */
+export async function updateHuntName(huntId: string, name: string): Promise<void> {
+  try {
+    const ref = doc(db, 'hunts', huntId);
+    await updateDoc(ref, { name, updatedAt: Timestamp.now() });
+  } catch (e) {
+    console.error('Error updating hunt name:', e);
+    throw e;
+  }
+}
+
+/** Delete a hunt by huntId. */
+export async function deleteHunt(huntId: string): Promise<void> {
+  try {
+    await deleteDoc(doc(db, 'hunts', huntId));
+  } catch (e) {
+    console.error('Error deleting hunt:', e);
+    throw e;
+  }
+}
+
+// ----------------------------------------------------------------------------
+// Player Hunts Firestore helpers
+// ----------------------------------------------------------------------------
+
+/**
+ * Sets or updates the player's hunt status. Uses deterministic doc id `${userId}_${huntId}`.
+ */
+export async function setPlayerHuntStatus(
+  userId: string,
+  huntId: string,
+  huntName: string | undefined,
+  status: PlayerHuntStatus
+): Promise<void> {
+  try {
+    const playerHuntId = `${userId}_${huntId}`;
+    const ref = doc(db, 'PlayerHunts', playerHuntId);
+    const existing = await getDoc(ref);
+    const nowTs = Timestamp.now();
+    const basePayload: Record<string, any> = {
+      playerHuntId,
+      userId,
+      huntId,
+      huntName: huntName ?? null,
+      status,
+      updatedAt: nowTs,
+      ...(status === 'COMPLETED' ? { completedAt: nowTs } : {}),
+      ...(status === 'STARTED' ? { startTime: nowTs } : {})
+    };
+    if (existing.exists()) {
+      await updateDoc(ref, basePayload);
+    } else {
+      await setDoc(ref, { ...basePayload, createdAt: nowTs });
+    }
+  } catch (e) {
+    console.error('Error setting player hunt status:', e);
+    throw e;
+  }
+}
+
+/** Get all player hunts for user with given status. */
+export async function getPlayerHuntsByStatus(
+  userId: string,
+  status: PlayerHuntStatus
+): Promise<PlayerHunts[]> {
+  try {
+    const qRef = query(
+      collection(db, 'PlayerHunts'),
+      where('userId', '==', userId),
+      where('status', '==', status)
+    );
+    const snap = await getDocs(qRef);
+    return snap.docs.map(d => d.data() as PlayerHunts);
+  } catch (e) {
+    console.error('Error fetching player hunts by status:', e);
+    throw e;
+  }
+}
+
+/** Convenience for completed hunts. */
+export async function getCompletedPlayerHunts(userId: string): Promise<PlayerHunts[]> {
+  return getPlayerHuntsByStatus(userId, 'COMPLETED');
+}
+
+/** Fetch a single player hunt status for user + hunt. */
+export async function getPlayerHunt(userId: string, huntId: string): Promise<PlayerHunts | null> {
+  try {
+    const playerHuntId = `${userId}_${huntId}`;
+    const ref = doc(db, 'PlayerHunts', playerHuntId);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return null;
+    return snap.data() as PlayerHunts;
+  } catch (e) {
+    console.error('Error fetching player hunt record:', e);
+    throw e;
+  }
+}
+
+/** Abandon a player hunt: remove PlayerHunts record + user check-ins. */
+export async function abandonPlayerHunt(userId: string, huntId: string): Promise<void> {
+  try {
+    const playerHuntId = `${userId}_${huntId}`;
+    await deleteDoc(doc(db, 'PlayerHunts', playerHuntId));
+    await deleteUserCheckInsForHunt(userId, huntId);
+  } catch (e) {
+    console.error('Error abandoning player hunt:', e);
+    throw e;
+  }
 }
 
 // ============================================================================
@@ -137,6 +374,8 @@ export async function register(
     if (name) {
       await updateProfile(userCredential.user, { displayName: name });
     }
+    // Ensure a user record exists in `users` with the userId field
+    await ensureUserDocument(userCredential.user.uid);
     return { user: userCredential.user };
   } catch (e) {
     console.error("[error registering] ==>", e);
@@ -329,5 +568,25 @@ export async function deleteLocation(docId: string): Promise<void> {
   } catch (error) {
     console.error('Error deleting location:', error);
     throw error;
+  }
+}
+
+//User collection - store userId field
+export async function ensureUserDocument(userId: string): Promise<void> {
+  try {
+    const ref = doc(db, 'users', userId);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      await updateDoc(ref, {
+        userId,
+      });
+    } else {
+      await setDoc(ref, {
+        userId,
+      });
+    }
+  } catch (e) {
+    console.error('Error ensuring user document:', e);
+    throw e;
   }
 }

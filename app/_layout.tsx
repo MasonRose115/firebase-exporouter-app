@@ -3,7 +3,7 @@ import { Slot } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
-import { store } from './(app)/models/store';
+import { store, persistor } from './(app)/models/store';
 // Import your global CSS file
 import "../global.css";
 
@@ -21,22 +21,13 @@ import "../global.css";
 export default function Root() {
   return (
     <Provider store={store}>
-      <SessionProvider>
-        {/* 
-          GestureHandlerRootView is required for:
-          - Drawer navigation gestures
-          - Swipe gestures
-          - Other gesture-based interactions
-          Must wrap the entire app to function properly
-        */}
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          {/* 
-            Slot renders child routes dynamically
-            This includes both (app) and (auth) group routes
-          */}
-          <Slot />
-        </GestureHandlerRootView>
-      </SessionProvider>
+      <PersistGate persistor={persistor} loading={null}>
+        <SessionProvider>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <Slot />
+          </GestureHandlerRootView>
+        </SessionProvider>
+      </PersistGate>
     </Provider>
   );
 }

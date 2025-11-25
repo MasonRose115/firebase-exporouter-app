@@ -1,12 +1,12 @@
 import { useSelector, useDispatch } from "react-redux";
 import { useState } from "react";
 import { useRouter } from "expo-router";
-import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
+import { View, Text, StyleSheet, Pressable, ScrollView, Alert } from "react-native";
 import Checkbox from "expo-checkbox";
 import { Ionicons } from "@expo/vector-icons";
 import { toggleItemFound, startHunt, endHunt, removeItem, removeItemsBulk, addItem } from "../../models/ScavSlice";
 import PageHeader from "../../../../components/PageHeader";
-import {Hunts, User} from "../../../../lib/firebase-service";
+import { createHunt, getCurrentUser, setPlayerHuntStatus } from "../../../../lib/firebase-service";
 
 const ScavengerHunt = () => {
   const router = useRouter();
@@ -25,10 +25,39 @@ const ScavengerHunt = () => {
 
   const handleStartHunt = (itemId) => {
     dispatch(startHunt(itemId));
+    // Persist STARTED status
+    (async () => {
+      try {
+        const res = await getCurrentUser();
+        const uid = res?.user?.uid;
+        if (uid) {
+          const item = items.find(i => i.id === itemId);
+          await setPlayerHuntStatus(uid, String(itemId), item?.name, 'STARTED');
+        }
+      } catch (e) {
+        console.error('Failed to persist STARTED status:', e);
+      }
+    })();
   };
 
   const handleEndHunt = (itemId) => {
     dispatch(endHunt(itemId));
+    // Persist completion/abandoned status
+    (async () => {
+      try {
+        const res = await getCurrentUser();
+        const uid = res?.user?.uid;
+        if (uid) {
+          const item = items.find(i => i.id === itemId);
+          if (item) {
+            const status = item.found ? 'COMPLETED' : 'ABANDONED';
+            await setPlayerHuntStatus(uid, String(itemId), item.name, status);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to persist end status:', e);
+      }
+    })();
   };
 
   const handleToggleSelect = (itemId) => {
@@ -47,10 +76,27 @@ const ScavengerHunt = () => {
     setSelectedItems(new Set());
   };
 
-  const handleAddAndStart = () => {
+  const handleAddAndStart = async () => {
     const id = Date.now().toString();
     const count = items.length + 1;
-    dispatch(addItem({ id, name: `New Hunt ${count}`, description: '' }));
+    const name = `New Hunt ${count}`;
+
+    // Persist to Firestore hunts collection with userId if logged in
+    try {
+      const res = await getCurrentUser();
+      const uid = res?.user?.uid;
+      if (!uid) {
+        Alert.alert('Not signed in', 'You must be signed in to save hunts to the cloud. This hunt will exist only locally.');
+      } else {
+        await createHunt(id, name, uid);
+      }
+    } catch (e) {
+      console.error('Failed to create hunt in Firestore:', e);
+      Alert.alert('Cloud save failed', 'The hunt was created locally but could not be saved to the cloud.');
+    }
+
+    // Always create locally so the UI updates
+    dispatch(addItem({ id, name, description: '' }));
     dispatch(startHunt(id));
   };
 
@@ -65,9 +111,14 @@ const ScavengerHunt = () => {
       <View style={styles.startedSection}>
         <View style={styles.startedHeaderRow}>
           <Text style={styles.startedTitle}>Started Hunts ({startedItems.length})</Text>
-          <Pressable style={styles.startNewButton} onPress={handleAddAndStart}>
-            <Text style={styles.startNewButtonText}>Start New Hunt</Text>
-          </Pressable>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Pressable style={styles.startNewButton} onPress={handleAddAndStart}>
+              <Text style={styles.startNewButtonText}>Start New Hunt</Text>
+            </Pressable>
+            <Pressable style={styles.completedButton} onPress={() => router.push({ pathname: "/(app)/(drawer)/(tabs)/hunt/MyCompletedHunts" })}>
+              <Text style={styles.startNewButtonText}>Completed</Text>
+            </Pressable>
+          </View>
         </View>
         {startedItems.length === 0 ? (
           <Text style={styles.startedEmpty}>No hunts started yet.</Text>
@@ -236,6 +287,12 @@ const styles = StyleSheet.create({
   },
   startNewButton: {
     backgroundColor: '#2563eb',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  completedButton: {
+    backgroundColor: '#10b981',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,

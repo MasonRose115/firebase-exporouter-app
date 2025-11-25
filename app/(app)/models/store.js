@@ -28,3 +28,6 @@ const persistedReducer = persistReducer(persistConfig, rootReducer);
 export const store = configureStore({
   reducer: persistedReducer
 });
+
+// Create persistor instance so redux-persist actually hydrates state
+export const persistor = persistStore(store);
