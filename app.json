@@ -36,7 +36,13 @@
       "expo-router",
       "expo-font",
       "expo-secure-store",
-      "expo-location"
+      "expo-location",
+      [
+        "react-native-maps",
+        {
+          "enableGoogleMapsOnAndroid": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

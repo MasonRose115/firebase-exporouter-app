@@ -590,3 +590,72 @@ export async function ensureUserDocument(userId: string): Promise<void> {
     throw e;
   }
 }
+
+// Get user profile data
+export async function getUserProfile(userId: string): Promise<any> {
+  try {
+    const ref = doc(db, 'users', userId);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      return { id: snap.id, ...snap.data() };
+    }
+    return null;
+  } catch (e) {
+    console.error('Error getting user profile:', e);
+    throw e;
+  }
+}
+
+// Update user profile
+export async function updateUserProfile(userId: string, data: { displayName?: string; profileImageUrl?: string }): Promise<void> {
+  try {
+    const ref = doc(db, 'users', userId);
+    await updateDoc(ref, {
+      ...data,
+      updatedAt: new Date(),
+    });
+  } catch (e) {
+    console.error('Error updating user profile:', e);
+    throw e;
+  }
+}
+
+// Get global scoreboard - all users ranked by completed hunts
+export async function getGlobalScoreboard(): Promise<any[]> {
+  try {
+    // Get all completed PlayerHunts
+    const playerHuntsRef = collection(db, 'PlayerHunts');
+    const q = query(playerHuntsRef, where('status', '==', 'COMPLETED'));
+    const snapshot = await getDocs(q);
+    
+    // Group by userId and count
+    const userCounts: Record<string, number> = {};
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const userId = data.userId;
+      if (userId) {
+        userCounts[userId] = (userCounts[userId] || 0) + 1;
+      }
+    });
+    
+    // Fetch user profiles for all users with completed hunts
+    const userIds = Object.keys(userCounts);
+    const scoreboard = await Promise.all(
+      userIds.map(async (userId) => {
+        const userProfile = await getUserProfile(userId);
+        return {
+          userId,
+          displayName: userProfile?.displayName || 'Anonymous',
+          profileImageUrl: userProfile?.profileImageUrl || null,
+          completedCount: userCounts[userId],
+        };
+      })
+    );
+    
+    // Sort by completed count descending
+    return scoreboard.sort((a, b) => b.completedCount - a.completedCount);
+  } catch (e) {
+    console.error('Error getting global scoreboard:', e);
+    throw e;
+  }
+}

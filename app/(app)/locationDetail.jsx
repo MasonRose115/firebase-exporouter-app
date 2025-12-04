@@ -166,14 +166,6 @@ export default function LocationDetail() {
       setIsLoading(false);
     }
   };
-
-const startTracking = async () => {
-      await Location.startLocationUpdatesAsync(taskName, {
-        accuracy: Location.Accuracy.Highest,
-        distanceInterval: 3,
-      });
-    };
-
     const stopTracking = async () => {
      await Location.stopLocationUpdatesAsync(taskName);
 

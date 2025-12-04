@@ -3,7 +3,7 @@ import React from "react";
 import { useNavigation } from "expo-router";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons"; // or your icon library
 import { Pressable } from "react-native";
-import { DrawerNavigationProp } from "@react-navigation/drawer";
+import { DrawerActions } from "@react-navigation/native";
 
 import { TabBarIcon } from "@/components/navigation/TabBarIcon";
 import { Colors } from "@/constants/Colors";
@@ -17,7 +17,7 @@ import { useColorScheme } from "@/hooks/useColorScheme";
  */
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const navigation = useNavigation<DrawerNavigationProp<any>>();
+  const navigation = useNavigation();
 
   return (
     <Tabs
@@ -31,7 +31,7 @@ export default function TabLayout() {
          */
         headerLeft: () => (
           <Pressable
-            onPress={() => navigation.openDrawer()}
+            onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
             style={{ marginLeft: 16 }}
           >
             <Ionicons name="menu" size={24} color="black" />
@@ -78,6 +78,31 @@ export default function TabLayout() {
               style={{ marginTop: 2 }}
             />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="scoreboard"
+        options={{
+          title: "Scoreboard",
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? "trophy" : "trophy-outline"}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="HuntDiscovery"
+        options={{
+          href: null, // Hide from tabs
+        }}
+      />
+      <Tabs.Screen
+        name="hunt"
+        options={{
+          href: null, // Hide from tabs
         }}
       />
     </Tabs>

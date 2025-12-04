@@ -1,10 +1,19 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, StyleSheet, Pressable, Alert } from "react-native";
+import { View, Text, TextInput, StyleSheet, Pressable, Alert, Platform, ScrollView } from "react-native";
 import { updateItemName } from "../../../models/ScavSlice";
 import { getCurrentUser, getHuntById, createHunt, updateHuntName, getLocationsByHunt, getPlayerHunt, setPlayerHuntStatus, getCheckInSummaryForHunt, abandonPlayerHunt } from "../../../../../lib/firebase-service";
 import PageHeader from "../../../../../components/PageHeader";
+
+// Conditionally import MapView only on native platforms
+let MapView, Marker, PROVIDER_GOOGLE;
+if (Platform.OS !== 'web') {
+  const MapLibrary = require('react-native-maps');
+  MapView = MapLibrary.default;
+  Marker = MapLibrary.Marker;
+  PROVIDER_GOOGLE = MapLibrary.PROVIDER_GOOGLE;
+}
 
 export default function HuntDetail() {
   const { id } = useLocalSearchParams();
@@ -19,6 +28,7 @@ export default function HuntDetail() {
   const [userCompleted, setUserCompleted] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [mapRegion, setMapRegion] = useState(null);
 
   useEffect(() => {
     setName(item?.name ?? "");
@@ -37,7 +47,28 @@ export default function HuntDetail() {
         const [locs] = await Promise.all([
           getLocationsByHunt(String(id))
         ]);
-        if (mounted) setLocations(locs);
+        if (mounted) {
+          setLocations(locs);
+          // Calculate map region to fit all locations
+          if (locs.length > 0) {
+            const lats = locs.map(l => l.latitude);
+            const lngs = locs.map(l => l.longitude);
+            const minLat = Math.min(...lats);
+            const maxLat = Math.max(...lats);
+            const minLng = Math.min(...lngs);
+            const maxLng = Math.max(...lngs);
+            const centerLat = (minLat + maxLat) / 2;
+            const centerLng = (minLng + maxLng) / 2;
+            const deltaLat = (maxLat - minLat) * 1.5 || 0.01;
+            const deltaLng = (maxLng - minLng) * 1.5 || 0.01;
+            setMapRegion({
+              latitude: centerLat,
+              longitude: centerLng,
+              latitudeDelta: deltaLat,
+              longitudeDelta: deltaLng,
+            });
+          }
+        }
         if (uid) {
           const rec = await getPlayerHunt(uid, String(id));
           if (mounted) setStatusRecord(rec);
@@ -116,24 +147,54 @@ export default function HuntDetail() {
     }
   };
 
-  const handleAbandon = async () => {
-    Alert.alert('Abandon Hunt', 'Are you sure? All progress will be lost.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Abandon', style: 'destructive', onPress: async () => {
-        try {
-          const res = await getCurrentUser();
-          const uid = res?.user?.uid;
-          if (!uid) return;
-          await abandonPlayerHunt(uid, String(id));
-          setStatusRecord(null);
-          setUserCompleted(new Set());
-          setCheckInCounts({});
-        } catch (e) {
-          console.error('Failed to abandon hunt:', e);
-          Alert.alert('Error', 'Could not abandon the hunt.');
-        }
-      }}
-    ]);
+  const handleAbandon = () => {
+    // For web, use window.confirm; for native, use Alert.alert
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('Are you sure you want to abandon this hunt? All progress will be lost.');
+      if (confirmed) {
+        performAbandon();
+      }
+    } else {
+      Alert.alert(
+        'Abandon Hunt',
+        'Are you sure you want to abandon this hunt? All progress will be lost.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Abandon',
+            style: 'destructive',
+            onPress: performAbandon
+          }
+        ]
+      );
+    }
+  };
+
+  const performAbandon = async () => {
+    try {
+      const res = await getCurrentUser();
+      const uid = res?.user?.uid;
+      if (!uid) return;
+      await abandonPlayerHunt(uid, String(id));
+      setStatusRecord(null);
+      setUserCompleted(new Set());
+      setCheckInCounts({});
+      if (Platform.OS === 'web') {
+        alert('Hunt abandoned successfully.');
+      } else {
+        Alert.alert('Hunt Abandoned', 'You have successfully abandoned this hunt.');
+      }
+    } catch (e) {
+      console.error('Failed to abandon hunt:', e);
+      if (Platform.OS === 'web') {
+        alert('Error: Could not abandon the hunt.');
+      } else {
+        Alert.alert('Error', 'Could not abandon the hunt.');
+      }
+    }
   };
 
   const isStarted = statusRecord?.status === 'STARTED' || statusRecord?.status === 'IN_PROGRESS';
@@ -144,20 +205,63 @@ export default function HuntDetail() {
         title={item?.name || 'Hunt Detail'}
         subtitle={statusRecord ? `Status: ${statusRecord.status}` : 'Status: Not Started'}
       />
-      {loading && <Text style={styles.info}>Loading...</Text>}
-      {!!error && <Text style={styles.error}>{error}</Text>}
-      {!loading && !error && (
-        <>
-          {!isStarted && (
-            <Pressable style={styles.startPlayButton} onPress={handleStartPlaying}>
-              <Text style={styles.startPlayButtonText}>Start Playing Hunt</Text>
-            </Pressable>
-          )}
-          {isStarted && (
-            <Pressable style={styles.abandonButton} onPress={handleAbandon}>
-              <Text style={styles.abandonButtonText}>Abandon Hunt</Text>
-            </Pressable>
-          )}
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+      >
+        {loading && <Text style={styles.info}>Loading...</Text>}
+        {!!error && <Text style={styles.error}>{error}</Text>}
+        {!loading && !error && (
+          <>
+            {/* Map Section */}
+            {locations.length > 0 && mapRegion && Platform.OS !== 'web' && (
+              <View style={styles.mapContainer}>
+                <Text style={styles.mapTitle}>Hunt Map</Text>
+                <MapView
+                  style={styles.map}
+                  provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+                  initialRegion={mapRegion}
+                  showsUserLocation={true}
+                  showsMyLocationButton={true}
+                >
+                  {locations.map((loc, index) => {
+                    const completed = userCompleted.has(loc.id);
+                    return (
+                      <Marker
+                        key={loc.id}
+                        coordinate={{
+                          latitude: loc.latitude,
+                          longitude: loc.longitude,
+                        }}
+                        title={isStarted ? loc.locationName : `Location ${index + 1}`}
+                        description={isStarted ? loc.explanation : '🔒 Start the hunt to reveal'}
+                        pinColor={completed ? '#10b981' : (isStarted ? '#f59e0b' : '#6b7280')}
+                      />
+                    );
+                  })}
+                </MapView>
+              </View>
+            )}
+
+            {/* Web fallback - show location count */}
+            {locations.length > 0 && Platform.OS === 'web' && (
+              <View style={styles.webMapPlaceholder}>
+                <Text style={styles.webMapText}>📍 {locations.length} Location{locations.length !== 1 ? 's' : ''}</Text>
+                <Text style={styles.webMapSubtext}>Map view available on mobile app</Text>
+              </View>
+            )}
+
+            {!isStarted && (
+              <Pressable style={styles.startPlayButton} onPress={handleStartPlaying}>
+                <Text style={styles.startPlayButtonText}>Start Playing Hunt</Text>
+              </Pressable>
+            )}
+            {isStarted && (
+              <Pressable style={styles.abandonButton} onPress={handleAbandon}>
+                <Text style={styles.abandonButtonText}>Abandon Hunt</Text>
+              </Pressable>
+            )}
           {/* Editable section (could be hidden for pure player view) */}
           <View style={styles.form}>
             <Text style={styles.label}>Hunt Name</Text>
@@ -208,12 +312,60 @@ export default function HuntDetail() {
           </View>
         </>
       )}
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: "#fff" },
+  scrollView: { flex: 1 },
+  scrollContent: { 
+    paddingBottom: 24,
+    flexGrow: 1,
+  },
+  mapContainer: {
+    margin: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#f9fafb',
+  },
+  mapTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    padding: 12,
+    paddingBottom: 8,
+    backgroundColor: '#fff',
+  },
+  map: {
+    width: '100%',
+    height: 300,
+  },
+  webMapPlaceholder: {
+    margin: 16,
+    marginBottom: 12,
+    padding: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    backgroundColor: '#f9fafb',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  webMapText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 6,
+  },
+  webMapSubtext: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
   form: { padding: 16 },
   title: { fontSize: 20, fontWeight: "700", marginBottom: 12 },
   label: { fontSize: 14, color: "#374151", marginBottom: 6 },
@@ -284,6 +436,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   startPlayButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  abandonButton: {
+    backgroundColor: '#dc2626',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 12,
+  },
+  abandonButtonText: {
     color: '#fff',
     fontWeight: '700',
     fontSize: 16,
