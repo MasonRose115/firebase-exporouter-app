@@ -1,7 +1,9 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useDispatch, useSelector } from "react-redux";
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, StyleSheet, Pressable, Alert, Platform, ScrollView } from "react-native";
+import { View, Text, TextInput, StyleSheet, Pressable, Alert, Platform, ScrollView, Share } from "react-native";
+import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
 import { updateItemName } from "../../../models/ScavSlice";
 import { getCurrentUser, getHuntById, createHunt, updateHuntName, getLocationsByHunt, getPlayerHunt, setPlayerHuntStatus, getCheckInSummaryForHunt, abandonPlayerHunt } from "../../../../../lib/firebase-service";
 import PageHeader from "../../../../../components/PageHeader";
@@ -197,6 +199,69 @@ export default function HuntDetail() {
     }
   };
 
+  const handleShare = async () => {
+    try {
+      const huntName = name || item?.name || 'this hunt';
+      const deepLink = Linking.createURL(`/(app)/(drawer)/(tabs)/hunt/HuntDetail`, {
+        queryParams: { id: String(id) }
+      });
+      
+      const message = `Check out "${huntName}" on Scavenger Hunt! Join me on this adventure: ${deepLink}`;
+      
+      if (Platform.OS === 'web') {
+        // For web, copy to clipboard
+        await navigator.clipboard.writeText(message);
+        alert('Link copied to clipboard!');
+      } else {
+        // For native, use Share API
+        const result = await Share.share({
+          message,
+          title: `Share ${huntName}`,
+          url: deepLink,
+        });
+        
+        if (result.action === Share.sharedAction) {
+          console.log('Hunt shared successfully');
+        }
+      }
+    } catch (e) {
+      console.error('Error sharing hunt:', e);
+      if (Platform.OS === 'web') {
+        alert('Failed to share hunt.');
+      } else {
+        Alert.alert('Error', 'Failed to share hunt.');
+      }
+    }
+  };
+
+  const handleCompleteHunt = async () => {
+    try {
+      const res = await getCurrentUser();
+      const uid = res?.user?.uid;
+      if (!uid) {
+        Alert.alert('Sign In Required', 'You must be signed in to complete this hunt.');
+        return;
+      }
+
+      await setPlayerHuntStatus(uid, String(id), name || item?.name, 'COMPLETED');
+      const rec = await getPlayerHunt(uid, String(id));
+      setStatusRecord(rec);
+      
+      if (Platform.OS === 'web') {
+        alert('🎉 Congratulations! You completed this hunt!');
+      } else {
+        Alert.alert('🎉 Success!', 'Congratulations! You completed this hunt!');
+      }
+    } catch (e) {
+      console.error('Failed to complete hunt:', e);
+      if (Platform.OS === 'web') {
+        alert('Error: Could not complete the hunt.');
+      } else {
+        Alert.alert('Error', 'Could not complete the hunt.');
+      }
+    }
+  };
+
   const isStarted = statusRecord?.status === 'STARTED' || statusRecord?.status === 'IN_PROGRESS';
 
   return (
@@ -252,17 +317,7 @@ export default function HuntDetail() {
               </View>
             )}
 
-            {!isStarted && (
-              <Pressable style={styles.startPlayButton} onPress={handleStartPlaying}>
-                <Text style={styles.startPlayButtonText}>Start Playing Hunt</Text>
-              </Pressable>
-            )}
-            {isStarted && (
-              <Pressable style={styles.abandonButton} onPress={handleAbandon}>
-                <Text style={styles.abandonButtonText}>Abandon Hunt</Text>
-              </Pressable>
-            )}
-          {/* Editable section (could be hidden for pure player view) */}
+            {/* Editable section (could be hidden for pure player view) */}
           <View style={styles.form}>
             <Text style={styles.label}>Hunt Name</Text>
             <TextInput
@@ -313,6 +368,32 @@ export default function HuntDetail() {
         </>
       )}
       </ScrollView>
+
+      {/* Action Buttons at Bottom */}
+      {!loading && !error && (
+        <View style={styles.buttonBar}>
+          {!isStarted && (
+            <Pressable style={[styles.fullButton, styles.startPlayButton]} onPress={handleStartPlaying}>
+              <Text style={styles.startPlayButtonText}>Start Playing Hunt</Text>
+            </Pressable>
+          )}
+          {isStarted && (
+            <View style={styles.bottomButtonContainer}>
+              <Pressable style={[styles.actionButton, styles.completeButton]} onPress={handleCompleteHunt}>
+                <Ionicons name="checkmark-circle" size={18} color="#fff" />
+                <Text style={styles.actionButtonText}>Complete</Text>
+              </Pressable>
+              <Pressable style={[styles.actionButton, styles.shareButton]} onPress={handleShare}>
+                <Ionicons name="share-social" size={18} color="#fff" />
+                <Text style={styles.actionButtonText}>Share</Text>
+              </Pressable>
+              <Pressable style={[styles.actionButton, styles.abandonButton]} onPress={handleAbandon}>
+                <Text style={styles.actionButtonText}>Abandon</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -432,27 +513,51 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: 10,
     alignItems: 'center',
-    marginHorizontal: 16,
-    marginBottom: 12,
   },
   startPlayButtonText: {
     color: '#fff',
     fontWeight: '700',
     fontSize: 16,
   },
+  buttonBar: {
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingBottom: 20,
+  },
+  fullButton: {
+    width: '100%',
+  },
+  bottomButtonContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    justifyContent: 'space-between',
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  completeButton: {
+    backgroundColor: '#059669',
+  },
+  shareButton: {
+    backgroundColor: '#10b981',
+  },
   abandonButton: {
     backgroundColor: '#dc2626',
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginBottom: 12,
-  },
-  abandonButtonText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
   },
   locationItem: {
     padding: 12,

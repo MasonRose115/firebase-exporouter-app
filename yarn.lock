@@ -4682,6 +4682,15 @@ expo-notifications@^0.32.12:
     expo-application "~7.0.7"
     expo-constants "~18.0.9"
 
+expo-quick-actions@^6.0.0:
+  version "6.0.0"
+  resolved "https://registry.npmjs.org/expo-quick-actions/-/expo-quick-actions-6.0.0.tgz"
+  integrity sha512-jxfvuZSiBxlRAggMibfw17L6w/1xsleB1AKJUC8QWQmGZq099hET4ycvZK9szaX4hOk5hqbkTxSLxTCk8qmPLw==
+  dependencies:
+    "@expo/image-utils" "^0.8.7"
+    schema-utils "^4.3.2"
+    sf-symbols-typescript "^2.1.0"
+
 expo-router@~4.0.17:
   version "4.0.17"
   resolved "https://registry.npmjs.org/expo-router/-/expo-router-4.0.17.tgz"
@@ -8133,7 +8142,7 @@ scheduler@0.25.0-rc-6230622a1a-20240610:
   resolved "https://registry.npmjs.org/scheduler/-/scheduler-0.25.0-rc-6230622a1a-20240610.tgz"
   integrity sha512-GTIQdJXthps5mgkIFo7yAq03M0QQYTfN8z+GrnMC/SCKFSuyFP5tk2BMaaWUsVy4u4r+dTLdiXH8JEivVls0Bw==
 
-schema-utils@^4.0.1, schema-utils@^4.3.0, schema-utils@^4.3.3:
+schema-utils@^4.0.1, schema-utils@^4.3.0, schema-utils@^4.3.2, schema-utils@^4.3.3:
   version "4.3.3"
   resolved "https://registry.npmjs.org/schema-utils/-/schema-utils-4.3.3.tgz"
   integrity sha512-eflK8wEtyOE6+hsaRVPxvUKYCpRgzLqDTb8krvAsRIwOGlHoSgYLgBXoubGgLd2fT41/OUYdb48v4k4WWHQurA==
@@ -8292,6 +8301,11 @@ setprototypeof@1.2.0:
   version "1.2.0"
   resolved "https://registry.npmjs.org/setprototypeof/-/setprototypeof-1.2.0.tgz"
   integrity sha512-E5LDX7Wrp85Kil5bhZv46j8jOeboKq5JMmYM3gVGdGH8xFpPWXUMsNrlODCrkoxMEeNi/XZIwuRvY4XNwYMJpw==
+
+sf-symbols-typescript@^2.1.0:
+  version "2.2.0"
+  resolved "https://registry.npmjs.org/sf-symbols-typescript/-/sf-symbols-typescript-2.2.0.tgz"
+  integrity sha512-TPbeg0b7ylrswdGCji8FRGFAKuqbpQlLbL8SOle3j1iHSs5Ob5mhvMAxWN2UItOjgALAB5Zp3fmMfj8mbWvXKw==
 
 shallow-clone@^3.0.0:
   version "3.0.1"

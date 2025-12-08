@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myapp",
+    "scheme": "scavengerhunt",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash.png",
@@ -14,7 +14,54 @@
     },
     "ios": {
       "bundleIdentifier": "com.aks.appwrnlibapp",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "associatedDomains": ["applinks:scavengerhunt.app"],
+      "infoPlist": {
+        "CFBundleIcons": {
+          "CFBundleAlternateIcons": {
+            "dark": {
+              "CFBundleIconFiles": ["dark-icon"],
+              "UIPrerenderedIcon": false
+            },
+            "vintage": {
+              "CFBundleIconFiles": ["vintage-icon"],
+              "UIPrerenderedIcon": false
+            },
+            "minimal": {
+              "CFBundleIconFiles": ["minimal-icon"],
+              "UIPrerenderedIcon": false
+            },
+            "colorful": {
+              "CFBundleIconFiles": ["colorful-icon"],
+              "UIPrerenderedIcon": false
+            },
+            "nature": {
+              "CFBundleIconFiles": ["nature-icon"],
+              "UIPrerenderedIcon": false
+            }
+          }
+        }
+      },
+      "UIApplicationShortcutItems": [
+        {
+          "UIApplicationShortcutItemType": "ongoing-hunts",
+          "UIApplicationShortcutItemTitle": "Active Hunts",
+          "UIApplicationShortcutItemSubtitle": "View your ongoing hunts",
+          "UIApplicationShortcutItemIconType": "UIApplicationShortcutIconTypePlay"
+        },
+        {
+          "UIApplicationShortcutItemType": "completed-hunts",
+          "UIApplicationShortcutItemTitle": "Completed Hunts",
+          "UIApplicationShortcutItemSubtitle": "View your completed hunts",
+          "UIApplicationShortcutItemIconType": "UIApplicationShortcutIconTypeCheckmark"
+        },
+        {
+          "UIApplicationShortcutItemType": "profile",
+          "UIApplicationShortcutItemTitle": "Profile",
+          "UIApplicationShortcutItemSubtitle": "View your profile",
+          "UIApplicationShortcutItemIconType": "UIApplicationShortcutIconTypeUser"
+        }
+      ]
     },
     "android": {
       "package": "com.aks.appwrnlibapp",
@@ -25,6 +72,60 @@
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "scavengerhunt.app",
+              "pathPrefix": "/hunt"
+            },
+            {
+              "scheme": "https",
+              "host": "scavengerhunt.app",
+              "pathPrefix": "/profile"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
+      "shortcuts": [
+        {
+          "name": "Active Hunts",
+          "shortName": "Hunts",
+          "description": "View your ongoing hunts",
+          "icon": "./assets/images/adaptive-icon.png",
+          "targetClass": "com.aks.appwrnlibapp.MainActivity",
+          "action": "android.intent.action.VIEW",
+          "extras": {
+            "action": "ongoing-hunts"
+          }
+        },
+        {
+          "name": "Completed Hunts",
+          "shortName": "Completed",
+          "description": "View your completed hunts",
+          "icon": "./assets/images/adaptive-icon.png",
+          "targetClass": "com.aks.appwrnlibapp.MainActivity",
+          "action": "android.intent.action.VIEW",
+          "extras": {
+            "action": "completed-hunts"
+          }
+        },
+        {
+          "name": "Profile",
+          "shortName": "Profile",
+          "description": "View your profile",
+          "icon": "./assets/images/adaptive-icon.png",
+          "targetClass": "com.aks.appwrnlibapp.MainActivity",
+          "action": "android.intent.action.VIEW",
+          "extras": {
+            "action": "profile"
+          }
+        }
       ]
     },
     "web": {

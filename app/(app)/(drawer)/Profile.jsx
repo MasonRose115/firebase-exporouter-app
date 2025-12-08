@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import PageHeader from '../../../components/PageHeader';
+import AppIconSelector from '../../../components/AppIconSelector';
 import { getCurrentUser, getUserProfile, updateUserProfile, getPlayerHuntsByStatus } from '../../../lib/firebase-service';
 
 export default function Profile() {
@@ -229,6 +230,13 @@ export default function Profile() {
           </View>
         </View>
 
+        {/* App Icon Selector */}
+        <View style={styles.iconSelectorSection}>
+          <AppIconSelector onIconChange={(iconId) => {
+            console.log('App icon changed to:', iconId);
+          }} />
+        </View>
+
         {/* Completed Hunts Section */}
         <View style={styles.huntsSection}>
           <Text style={styles.sectionTitle}>🏆 Completed Hunts</Text>
@@ -303,6 +311,8 @@ const styles = StyleSheet.create({
   statBox: { backgroundColor: '#eff6ff', padding: 20, paddingHorizontal: 40, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#dbeafe' },
   statNumber: { fontSize: 32, fontWeight: '700', color: '#2563eb', marginBottom: 4 },
   statLabel: { fontSize: 14, color: '#6b7280', fontWeight: '500' },
+  
+  iconSelectorSection: { marginBottom: 24, padding: 16, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb' },
   
   huntsSection: { flex: 1 },
   sectionTitle: { fontSize: 20, fontWeight: '700', color: '#111827', marginBottom: 16 },
