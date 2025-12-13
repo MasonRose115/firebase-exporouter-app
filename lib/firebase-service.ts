@@ -65,6 +65,7 @@ export interface HuntData {
   huntId: string; // logical id (also used as Firestore doc id)
   name: string;
   userId: string; // owner/creator
+  isVisible?: boolean; // whether the hunt is publicly visible (default: false)
 }
 
 // ============================================================================
@@ -83,6 +84,19 @@ export interface PlayerHunts {
   updatedAt?: Timestamp;
   completedAt?: Timestamp;
   startTime?: Timestamp; // optional explicit start time
+}
+
+// ============================================================================
+// Reviews - User reviews for hunts
+// ============================================================================
+
+export interface ReviewData {
+  reviewId?: string; // Unique ID Primary key (doc id - auto-generated)
+  huntId: string; // Foreign key linking to the hunt (from Hunts Collection)
+  userId: string; // Foreign key linking to the user (from Users Collection)
+  rating: number; // Number (1-5) The star rating given by the user
+  comment?: string; // The user's optional textual review
+  timestamp?: Timestamp; // Time the review was submitted
 }
 
 // ----------------------------------------------------------------------------
@@ -168,6 +182,18 @@ export async function getHuntById(huntId: string): Promise<HuntData | null> {
     return snap.data() as HuntData;
   } catch (e) {
     console.error('Error fetching hunt:', e);
+    throw e;
+  }
+}
+
+/** Get all hunts where isVisible is true. */
+export async function getAllVisibleHunts(): Promise<HuntData[]> {
+  try {
+    const qRef = query(collection(db, 'hunts'), where('isVisible', '==', true));
+    const snapshot = await getDocs(qRef);
+    return snapshot.docs.map(doc => ({ huntId: doc.id, ...doc.data() })) as HuntData[];
+  } catch (e) {
+    console.error('Error fetching visible hunts:', e);
     throw e;
   }
 }
@@ -656,6 +682,165 @@ export async function getGlobalScoreboard(): Promise<any[]> {
     return scoreboard.sort((a, b) => b.completedCount - a.completedCount);
   } catch (e) {
     console.error('Error getting global scoreboard:', e);
+    throw e;
+  }
+}
+
+// ============================================================================
+// Reviews Collection Functions
+// ============================================================================
+
+/**
+ * Create a new review for a hunt
+ */
+export async function createReview(reviewData: Omit<ReviewData, 'reviewId' | 'timestamp'>): Promise<string> {
+  try {
+    const docRef = await addDoc(collection(db, 'reviews'), {
+      ...reviewData,
+      timestamp: Timestamp.now(),
+    });
+    return docRef.id;
+  } catch (e) {
+    console.error('Error creating review:', e);
+    throw e;
+  }
+}
+
+/**
+ * Update an existing review
+ */
+export async function updateReview(reviewId: string, updates: Partial<ReviewData>): Promise<void> {
+  try {
+    const ref = doc(db, 'reviews', reviewId);
+    await updateDoc(ref, {
+      ...updates,
+      timestamp: Timestamp.now(),
+    });
+  } catch (e) {
+    console.error('Error updating review:', e);
+    throw e;
+  }
+}
+
+/**
+ * Delete a review
+ */
+export async function deleteReview(reviewId: string): Promise<void> {
+  try {
+    await deleteDoc(doc(db, 'reviews', reviewId));
+  } catch (e) {
+    console.error('Error deleting review:', e);
+    throw e;
+  }
+}
+
+/**
+ * Get a specific review by ID
+ */
+export async function getReview(reviewId: string): Promise<ReviewData | null> {
+  try {
+    const docSnap = await getDoc(doc(db, 'reviews', reviewId));
+    if (docSnap.exists()) {
+      return { reviewId: docSnap.id, ...docSnap.data() } as ReviewData;
+    }
+    return null;
+  } catch (e) {
+    console.error('Error getting review:', e);
+    throw e;
+  }
+}
+
+/**
+ * Get all reviews for a specific hunt
+ */
+export async function getReviewsForHunt(huntId: string): Promise<ReviewData[]> {
+  try {
+    const q = query(collection(db, 'reviews'), where('huntId', '==', huntId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      reviewId: doc.id,
+      ...doc.data()
+    })) as ReviewData[];
+  } catch (e) {
+    console.error('Error getting reviews for hunt:', e);
+    throw e;
+  }
+}
+
+
+
+/**
+ * Get all reviews by a specific user
+ */
+export async function getReviewsByUser(userId: string): Promise<ReviewData[]> {
+  try {
+    const q = query(collection(db, 'reviews'), where('userId', '==', userId));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      reviewId: doc.id,
+      ...doc.data()
+    })) as ReviewData[];
+  } catch (e) {
+    console.error('Error getting reviews by user:', e);
+    throw e;
+  }
+}
+
+/**
+ * Get average rating for a hunt
+ */
+export async function getAverageRatingForHunt(huntId: string): Promise<{ average: number; count: number }> {
+  try {
+    const reviews = await getReviewsForHunt(huntId);
+    if (reviews.length === 0) {
+      return { average: 0, count: 0 };
+    }
+    
+    const total = reviews.reduce((sum, review) => sum + review.rating, 0);
+    return {
+      average: total / reviews.length,
+      count: reviews.length
+    };
+  } catch (e) {
+    console.error('Error getting average rating for hunt:', e);
+    throw e;
+  }
+}
+
+
+
+/**
+ * Check if a user has already reviewed a specific hunt
+ */
+export async function hasUserReviewedHunt(userId: string, huntId: string): Promise<boolean> {
+  try {
+    const q = query(
+      collection(db, 'reviews'), 
+      where('userId', '==', userId),
+      where('huntId', '==', huntId)
+    );
+    const snapshot = await getDocs(q);
+    return !snapshot.empty;
+  } catch (e) {
+    console.error('Error checking if user reviewed hunt:', e);
+    throw e;
+  }
+}
+
+
+
+/**
+ * Get all reviews (for admin purposes)
+ */
+export async function getAllReviews(): Promise<ReviewData[]> {
+  try {
+    const snapshot = await getDocs(collection(db, 'reviews'));
+    return snapshot.docs.map(doc => ({
+      reviewId: doc.id,
+      ...doc.data()
+    })) as ReviewData[];
+  } catch (e) {
+    console.error('Error getting all reviews:', e);
     throw e;
   }
 }

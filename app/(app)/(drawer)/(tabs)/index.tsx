@@ -59,6 +59,27 @@ const TabsIndexScreen = () => {
         </Text>
       </View>
       
+      {/* Quick Actions */}
+      <View className="w-full max-w-sm mb-8">
+        <Pressable
+          onPress={() => router.push('/(app)/myActiveHunts')}
+          className="bg-blue-500 px-6 py-4 rounded-lg mb-4 active:bg-blue-600"
+        >
+          <Text className="text-white font-semibold text-base text-center">
+            My Active Hunts
+          </Text>
+        </Pressable>
+        
+        <Pressable
+          onPress={() => router.push('/(app)/(drawer)/(tabs)/huntDiscovery')}
+          className="bg-green-500 px-6 py-4 rounded-lg active:bg-green-600"
+        >
+          <Text className="text-white font-semibold text-base text-center">
+            Discover New Hunts
+          </Text>
+        </Pressable>
+      </View>
+      
       {/* Logout Button */}
       <Pressable
         onPress={handleLogout}

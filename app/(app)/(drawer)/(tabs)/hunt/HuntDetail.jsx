@@ -209,7 +209,6 @@ export default function HuntDetail() {
       const message = `Check out "${huntName}" on Scavenger Hunt! Join me on this adventure: ${deepLink}`;
       
       if (Platform.OS === 'web') {
-        // For web, copy to clipboard
         await navigator.clipboard.writeText(message);
         alert('Link copied to clipboard!');
       } else {

@@ -15,34 +15,71 @@
     "ios": {
       "bundleIdentifier": "com.aks.appwrnlibapp",
       "supportsTablet": true,
-      "associatedDomains": ["applinks:scavengerhunt.app"],
+      "associatedDomains": [
+        "applinks:scavengerhunt.app",
+        "applinks:scavengerhunt.app"
+      ],
       "infoPlist": {
         "CFBundleIcons": {
           "CFBundleAlternateIcons": {
             "dark": {
-              "CFBundleIconFiles": ["dark-icon"],
+              "CFBundleIconFiles": [
+                "dark-icon",
+                "dark-icon"
+              ],
               "UIPrerenderedIcon": false
             },
             "vintage": {
-              "CFBundleIconFiles": ["vintage-icon"],
+              "CFBundleIconFiles": [
+                "vintage-icon",
+                "vintage-icon"
+              ],
               "UIPrerenderedIcon": false
             },
             "minimal": {
-              "CFBundleIconFiles": ["minimal-icon"],
+              "CFBundleIconFiles": [
+                "minimal-icon",
+                "minimal-icon"
+              ],
               "UIPrerenderedIcon": false
             },
             "colorful": {
-              "CFBundleIconFiles": ["colorful-icon"],
+              "CFBundleIconFiles": [
+                "colorful-icon",
+                "colorful-icon"
+              ],
               "UIPrerenderedIcon": false
             },
             "nature": {
-              "CFBundleIconFiles": ["nature-icon"],
+              "CFBundleIconFiles": [
+                "nature-icon",
+                "nature-icon"
+              ],
               "UIPrerenderedIcon": false
             }
           }
-        }
+        },
+        "ITSAppUsesNonExemptEncryption": false
       },
       "UIApplicationShortcutItems": [
+        {
+          "UIApplicationShortcutItemType": "ongoing-hunts",
+          "UIApplicationShortcutItemTitle": "Active Hunts",
+          "UIApplicationShortcutItemSubtitle": "View your ongoing hunts",
+          "UIApplicationShortcutItemIconType": "UIApplicationShortcutIconTypePlay"
+        },
+        {
+          "UIApplicationShortcutItemType": "completed-hunts",
+          "UIApplicationShortcutItemTitle": "Completed Hunts",
+          "UIApplicationShortcutItemSubtitle": "View your completed hunts",
+          "UIApplicationShortcutItemIconType": "UIApplicationShortcutIconTypeCheckmark"
+        },
+        {
+          "UIApplicationShortcutItemType": "profile",
+          "UIApplicationShortcutItemTitle": "Profile",
+          "UIApplicationShortcutItemSubtitle": "View your profile",
+          "UIApplicationShortcutItemIconType": "UIApplicationShortcutIconTypeUser"
+        },
         {
           "UIApplicationShortcutItemType": "ongoing-hunts",
           "UIApplicationShortcutItemTitle": "Active Hunts",
@@ -89,7 +126,10 @@
               "pathPrefix": "/profile"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "shortcuts": [

@@ -35,6 +35,15 @@ export default function DrawerLayout() {
           }}
         />
         <Drawer.Screen
+          name="../myActiveHunts"
+          options={{
+            drawerLabel: "My Active Hunts",
+            drawerIcon: ({ color, size }) => (
+              <Ionicons name="compass" size={size} color={color} />
+            ),
+          }}
+        />
+        <Drawer.Screen
           name="Profile"
           options={{
             drawerLabel: "Profile",
